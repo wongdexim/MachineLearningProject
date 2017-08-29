@@ -82,22 +82,20 @@ run decision, random forest, and gbm generalized boosted regression models on tr
 test on testing data; based on accuracy, choose model for quiz
 ```{r modresults, echo=FALSE}
 #Decision Model training and testing results
-##control <- trainControl(method = "cv", number = 3)
-ModFit<-train(classe~., data=Train, method="rpart")##, trcontrol=control)
+##control <- trainControl(method = "cv", ...)
+ModFit<-train(classe~., data=Train, method="rpart")
 print(ModFit)
 ModPredict<-predict(ModFit, Test)
 confusionMatrix(Test$classe, ModPredict)
 
 #RF training and testing results
-##control <- trainControl(method = "cv", number = 3)
-RfFit<-train(classe~., data=Train, method="rf")##, trcontrol=control)
+RfFit<-train(classe~., data=Train, method="rf")
 print(RfFit)
 RfPredict<-predict(RfFit, Test)
 confusionMatrix(Test$classe, RfPredict)
 
 #Gbm training and testing results
-#control <- trainControl(method = "repeatedcv",number = 5,repeats = 1)
-GbmFit<-train(classe~., data=Train, method="gbm")#, preProcess="pca", trcontrol=control)
+GbmFit<-train(classe~., data=Train, method="gbm")
 print(GbmFit)
 GbmPredict<-predict(GbmFit, Test)
 confusionMatrix(Test$classe, GbmPredict)
