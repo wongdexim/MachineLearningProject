@@ -1,0 +1,111 @@
+---
+title: "Machine Learning Project"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(caret)
+library(rpart)
+```
+Daniel Wong - Aug 29, 2017
+
+## Project Background
+
+Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement - a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. In this project, your goal will be to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways. More information is available from the website here: http://web.archive.org/web/20161224072740/http:/groupware.les.inf.puc-rio.br/har (see the section on the Weight Lifting Exercise Dataset).
+
+
+## Data
+
+The training data for this project are available here: https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv
+
+The test data are available here:https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv
+
+
+The data for this project come from this source: http://web.archive.org/web/20161224072740/http:/groupware.les.inf.puc-rio.br/har. If you use the document you create for this class for any purpose please cite them as they have been very generous in allowing their data to be used for this kind of assignment.
+
+##loading data
+Full training and testing data sets loaded through the URL, with "NA", "DIV/o", and blanks converted to NA strings. 
+
+```{r loaddata, echo=FALSE}
+  trainUrl <- "http://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv"
+  testUrl <- "http://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv"
+  training <- read.csv(url(trainUrl), na.strings=c("NA","#DIV/0!",""))
+  testing <- read.csv(url(testUrl), na.strings=c("NA","#DIV/0!",""))
+```
+
+## review data
+using functions dim and str
+```{r reviewdata, echo=FALSE}
+  dim(training); dim(testing)
+  str(training)
+```
+
+## clean data
+removing variables that doesn't make sense (such as timestamp), variables with zero variance, and any variables with NAs > 95%
+```{r cleandata, echo=FALSE}
+  #remove variables that don't make sense
+  mytraining <- training[, -c(1:7)]
+
+  #remove 0 variance variables
+  NearZero = nearZeroVar(mytraining, saveMetrics = TRUE)
+    #str(NearZero, vec.len=2)
+    #NearZero[NearZero[,"zeroVar"]+NearZero[,"nzv"]>0,]
+  mytraining <- mytraining[, -NearZero[,"zeroVar"]==0]
+
+  #remove variables with NAs >95%
+    mostlyNA <- sapply(mytraining, function(x) mean(is.na(x))) >= 0.95
+    mytraining <-mytraining[, mostlyNA==F]
+
+  #Test Case with same var removal
+  TestCase<- testing[, -c(1:7)]
+  TestCase<- TestCase[, -NearZero[,"zeroVar"]==0]
+  TestCase<- TestCase[,mostlyNA==F]
+```
+
+## create test and train sets 
+train set at 70% of original training data; 30% left to test
+sets seed at 1234 to make results replicable
+```{r traintest, echo=FALSE}
+#spliting training and testing sets
+set.seed(1234)
+#folds<-createFolds(y=mytraining$classe, k=20, list=TRUE, returnTrain=TRUE)
+#Train1<-mytraining[folds[[1]],]
+
+inTrain <- createDataPartition(y=mytraining$classe, p=0.7, list=FALSE)
+Train <- mytraining[inTrain, ]; Test <- mytraining[-inTrain, ]
+```
+
+##run models
+run decision, random forest, and gbm generalized boosted regression models on training data
+test on testing data; based on accuracy, choose model for quiz
+```{r modresults, echo=FALSE}
+#Decision Model training and testing results
+##control <- trainControl(method = "cv", number = 3)
+ModFit<-train(classe~., data=Train, method="rpart")##, trcontrol=control)
+print(ModFit)
+ModPredict<-predict(ModFit, Test)
+confusionMatrix(Test$classe, ModPredict)
+
+#RF training and testing results
+##control <- trainControl(method = "cv", number = 3)
+RfFit<-train(classe~., data=Train, method="rf")##, trcontrol=control)
+print(RfFit)
+RfPredict<-predict(RfFit, Test)
+confusionMatrix(Test$classe, RfPredict)
+
+#Gbm training and testing results
+#control <- trainControl(method = "repeatedcv",number = 5,repeats = 1)
+GbmFit<-train(classe~., data=Train, method="gbm")#, preProcess="pca", trcontrol=control)
+print(GbmFit)
+GbmPredict<-predict(GbmFit, Test)
+confusionMatrix(Test$classe, GbmPredict)
+```
+
+##run final model
+using random forest model on quiz problem due to highest accuracy with random forest
+```{r finalresults, echo=FALSE}
+#test case results
+predict(RfFit, TestCase)
+```
